@@ -8,7 +8,7 @@ use std::vec::Vec;
 
 
 pub trait Message: Sized {
-    fn send(&self, socket: &zmq::Socket) -> Result<(), zmq::Error>;
+    fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error>;
     fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError>;
 }
 
@@ -43,5 +43,24 @@ impl<T: ToString> From<T> for ReceiveError {
     }
 }
 
-pub use rate::Rate;
+impl<T: Message> Message for Vec<T> {
+    fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
+        for message in self {
+            message.send(socket, flags | zmq::SNDMORE)?;
+        }
+        socket.send(b"", flags)
+    }
+
+    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
+        let mut vec = Vec::new();
+
+        while let Some(message) = T::receive(socket)? {
+            vec.push(message);
+        }
+
+        Ok(Some(vec))
+    }
+}
+
+pub use rate::{Rate, RateUpdate};
 

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Instant;
 
 use super::zmq;
 use super::{Message, ReceiveError};
@@ -6,29 +7,37 @@ use super::{Message, ReceiveError};
 
 #[derive(Clone, Debug)]
 pub struct Rate {
-    pub currency: String,
+    pub timestamp: u64,
     pub values: HashMap<String, f64>,
 }
 
+#[derive(Clone, Debug)]
+pub struct RateUpdate {
+    pub exchange: String,
+    pub currency: String,
+    pub rate: Rate,
+}
+
 impl Message for Rate {
-    fn send(&self, socket: &zmq::Socket) -> Result<(), zmq::Error> {
-        socket.send_str(&self.currency, zmq::SNDMORE)?;
+    fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
+        socket.send_str(&self.timestamp.to_string(), flags | zmq::SNDMORE);
 
         for (currency, value) in &self.values {
-            socket.send_str(&currency, zmq::SNDMORE)?;
-            socket.send_str(&value.to_string(), zmq::SNDMORE)?;
+            socket.send_str(&currency, flags | zmq::SNDMORE)?;
+            socket.send_str(&value.to_string(), flags | zmq::SNDMORE)?;
         }
 
-        socket.send(b"", 0)?;
+        socket.send(b"", flags)?;
         Ok(())
     }
 
-    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError>
-    {
-        let currency = socket.recv_string(0)??;
-        if currency.len() == 0 { return Ok(None); }
-
+    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
         let mut values = HashMap::new();
+
+        let timestamp = socket.recv_string(0)??; 
+        if timestamp.len() == 0 { return Ok(None); }
+        
+        let timestamp = timestamp.parse()?;
 
         loop {
             let other_currency = socket.recv_string(0)??;
@@ -39,8 +48,34 @@ impl Message for Rate {
         }
 
         Ok(Some(Self {
-            currency: currency,
-            values: values
+            timestamp: timestamp,
+            values: values,
         }))
     }
 }
+
+impl Message for RateUpdate {
+    fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
+        socket.send_str(&self.currency, flags | zmq::SNDMORE)?;
+        socket.send_str(&self.exchange, flags | zmq::SNDMORE)?;
+        self.rate.send(socket, 0)?;
+
+        Ok(())
+    }
+
+    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
+        let currency = socket.recv_string(0)??;
+        if currency.len() == 0 { return Ok(None); }
+
+        let exchange = socket.recv_string(0)??;
+
+        let rate = Rate::receive(socket)?.unwrap();
+
+        Ok(Some(RateUpdate {
+            currency: currency,
+            exchange: exchange,
+            rate: rate,
+        }))
+    }
+}
+
