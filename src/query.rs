@@ -3,13 +3,13 @@ use super::{Message, ReceiveError};
 
 #[derive(Debug)]
 pub enum ExchangeQuery {
-    HISTORY
+    History
 }
 
 impl Message for ExchangeQuery {
     fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
         socket.send_str(match self {
-            &ExchangeQuery::HISTORY => "history"
+            &ExchangeQuery::History => "history"
         }, flags)
     }
 
@@ -18,7 +18,7 @@ impl Message for ExchangeQuery {
         if query.len() == 0 { return Ok(None); }
 
         match query.as_ref() {
-            "history" => Ok(Some(ExchangeQuery::HISTORY)),
+            "history" => Ok(Some(ExchangeQuery::History)),
             _ => Err(ReceiveError::String("invalid operation".to_string()))
         }
     }
