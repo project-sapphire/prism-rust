@@ -3,13 +3,14 @@
 extern crate zmq;
 
 mod rate;
+mod query;
 
 use std::vec::Vec;
 
 
 pub trait Message: Sized {
     fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error>;
-    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError>;
+    fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError>;
 }
 
 #[derive(Debug)]
@@ -51,10 +52,10 @@ impl<T: Message> Message for Vec<T> {
         socket.send(b"", flags)
     }
 
-    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
+    fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
         let mut vec = Vec::new();
 
-        while let Some(message) = T::receive(socket)? {
+        while let Some(message) = T::receive(socket, flags)? {
             vec.push(message);
         }
 
@@ -63,4 +64,5 @@ impl<T: Message> Message for Vec<T> {
 }
 
 pub use rate::{Rate, RateUpdate};
+pub use query::{ExchangeQuery};
 

@@ -31,19 +31,19 @@ impl Message for Rate {
         Ok(())
     }
 
-    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
+    fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
         let mut values = HashMap::new();
 
-        let timestamp = socket.recv_string(0)??; 
+        let timestamp = socket.recv_string(flags)??; 
         if timestamp.len() == 0 { return Ok(None); }
         
         let timestamp = timestamp.parse()?;
 
         loop {
-            let other_currency = socket.recv_string(0)??;
+            let other_currency = socket.recv_string(flags)??;
             if other_currency.len() == 0 { break; }
 
-            let value = socket.recv_string(0)??.parse()?;
+            let value = socket.recv_string(flags)??.parse()?;
             values.insert(other_currency, value);
         }
 
@@ -63,13 +63,13 @@ impl Message for RateUpdate {
         Ok(())
     }
 
-    fn receive(socket: &zmq::Socket) -> Result<Option<Self>, ReceiveError> {
-        let currency = socket.recv_string(0)??;
+    fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
+        let currency = socket.recv_string(flags)??;
         if currency.len() == 0 { return Ok(None); }
 
-        let exchange = socket.recv_string(0)??;
+        let exchange = socket.recv_string(flags)??;
 
-        let rate = Rate::receive(socket)?.unwrap();
+        let rate = Rate::receive(socket, flags)?.unwrap();
 
         Ok(Some(RateUpdate {
             currency: currency,
