@@ -4,6 +4,7 @@ extern crate zmq;
 
 mod rate;
 mod query;
+mod serialize;
 
 use std::vec::Vec;
 
@@ -64,5 +65,5 @@ impl<T: Message> Message for Vec<T> {
 }
 
 pub use rate::{Rate, RateUpdate};
-pub use query::{ExchangeQuery};
+pub use query::{ExchangeQuery, ExchangeRequest};
 
