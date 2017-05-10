@@ -1,2 +1,2 @@
-pub mod rate;
-pub mod query;
+mod rate;
+mod query;
