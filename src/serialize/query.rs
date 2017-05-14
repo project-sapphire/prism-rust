@@ -9,14 +9,13 @@ impl Message for ExchangeQuery {
         socket.send_str(match self {
             &ExchangeQuery::History(_) => "history",
             &ExchangeQuery::Status(_) => "status",
-            &ExchangeQuery::Exchange(_, _, _, _, _) => "exchange",
+            &ExchangeQuery::Exchange(_, _, _, _) => "exchange",
         }, flags | zmq::SNDMORE)?;
 
         match self {
             &ExchangeQuery::History(age) => socket.send_str(&age.to_string(), flags),
             &ExchangeQuery::Status(ref transaction) => socket.send_str(transaction, flags),
-            &ExchangeQuery::Exchange(ref from, ref to, amount, ref source, ref destination) => {
-                socket.send_str(from, flags | zmq::SNDMORE)?;
+            &ExchangeQuery::Exchange(ref to, amount, ref source, ref destination) => {
                 socket.send_str(to, flags | zmq::SNDMORE)?;
                 socket.send_str(&amount.to_string(), flags | zmq::SNDMORE)?;
                 socket.send_str(source, flags | zmq::SNDMORE)?;
@@ -33,7 +32,6 @@ impl Message for ExchangeQuery {
             "history" => Ok(Some(ExchangeQuery::History(socket.recv_string(flags)??.parse()?))),
             "status" => Ok(Some(ExchangeQuery::Status(socket.recv_string(flags)??))),
             "exchange" => Ok(Some(ExchangeQuery::Exchange(
-                socket.recv_string(flags)??,
                 socket.recv_string(flags)??,
                 socket.recv_string(flags)??.parse()?,
                 socket.recv_string(flags)??,
@@ -115,10 +113,8 @@ impl Message for WalletRequest {
     }
 
     fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
-        let exchange = socket.recv_string(flags)??;
-        if exchange.len() == 0 { return Ok(None); }
-
         let currency = socket.recv_string(flags)??;
+        if currency.len() == 0 { return Ok(None); }
 
         //let query = match ExchangeQuery::receive(socket, flags)? {
         //    Some(x) => x,

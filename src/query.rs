@@ -4,7 +4,7 @@ use super::{Message, ReceiveError};
 pub enum ExchangeQuery {
     History(u64),
     // this is no good... :(
-    Exchange(String, String, f64, String, String),
+    Exchange(String, f64, String, String),
     Status(String),
 }
 
