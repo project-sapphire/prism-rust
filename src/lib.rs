@@ -4,9 +4,13 @@ extern crate zmq;
 
 mod rate;
 mod query;
+mod transact;
 mod serialize;
 
 use std::vec::Vec;
+
+use std::str::FromStr;
+use std::string::ToString;
 
 
 pub trait Message: Sized {
@@ -45,6 +49,26 @@ impl<T: ToString> From<T> for ReceiveError {
     }
 }
 
+/*impl<T: ToString + FromStr> Message for T {
+    default fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
+        socket.send_str(&self.to_string(), flags)
+    }
+
+    default fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
+        Self::from_str(&socket.recv_string()??)?
+    }
+}*/
+
+impl Message for f64 {
+    default fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
+        socket.send_str(&self.to_string(), flags)
+    }
+
+    default fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
+        Ok(Some(Self::from_str(&socket.recv_string(flags)??)?))
+    }
+}
+
 impl<T: Message> Message for Vec<T> {
     fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
         for message in self {
@@ -66,4 +90,5 @@ impl<T: Message> Message for Vec<T> {
 
 pub use rate::{Rate, RateUpdate};
 pub use query::{ExchangeQuery, ExchangeRequest};
-
+pub use query::{WalletQuery, WalletRequest};
+pub use transact::{Invoice};
