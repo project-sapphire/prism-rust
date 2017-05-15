@@ -7,6 +7,9 @@ mod query;
 mod transact;
 mod serialize;
 
+pub mod exchange;
+pub mod wallet;
+
 use std::vec::Vec;
 
 use std::str::FromStr;
@@ -18,11 +21,16 @@ pub trait Message: Sized {
     fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ReceiveError {
     String(String),
     ZeroMQ(zmq::Error),
     Decode(Vec<u8>),
+}
+
+#[derive(Debug, Clone)]
+pub enum Error {
+    Receive(ReceiveError),
 }
 
 impl From<String> for ReceiveError {
@@ -46,6 +54,12 @@ impl From<Vec<u8>> for ReceiveError {
 impl<T: ToString> From<T> for ReceiveError {
     default fn from(e: T) -> ReceiveError {
         ReceiveError::String(e.to_string())
+    }
+}
+
+impl From<ReceiveError> for Error {
+    fn from(e: ReceiveError) -> Error {
+        Error::Receive(e)
     }
 }
 
