@@ -59,15 +59,15 @@ impl<T: ToString> From<T> for ReceiveError {
     }
 }*/
 
-/*impl Message for String {
+impl Message for String {
     default fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
         socket.send_str(self, flags)
     }
 
     default fn receive(socket: &zmq::Socket, flags: i32) -> Result<Option<Self>, ReceiveError> {
-        socket.recv_string()
+        Ok(Some(socket.recv_string(flags)??))
     }
-}*/
+}
 
 impl Message for f64 {
     default fn send(&self, socket: &zmq::Socket, flags: i32) -> Result<(), zmq::Error> {
